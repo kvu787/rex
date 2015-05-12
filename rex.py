@@ -1,27 +1,81 @@
-#!/usr/bin/python3
+import copy
 
-def main():
-    test_copy()
-    test_make_nfa()
-    test_concat()
-    test_altern()
-    test_star()
+class Rex(object):
+    @classmethod
+    def from_character(cls, char):
+        assert type(char) == str
+        assert len(char) == 0 or len(char) == 1
 
-class Nfa(object):
+        final = _Node(True, [])
+        start = _Node(False, [(char, final)])
+
+        return cls(start, final)
+
+    def run(self, strng):
+        assert type(strng) == str
+
+        return self.__start.run(strng)
+
+    def concat(self, other):
+        assert type(other) == Rex
+
+        self_copy = copy.deepcopy(self)
+        other_copy = copy.deepcopy(other)
+        self_copy.__final.is_final = False
+        self_copy.__final.transitions.append(('', other.__start))
+        new_start = self_copy.__start
+        new_final = other_copy.__final
+
+        return Rex(new_start, new_final)
+
+    def altern(self, other):
+        assert type(other) == Rex
+
+        self_copy = copy.deepcopy(self)
+        other_copy = copy.deepcopy(other)
+        new_start = _Node(
+                False,
+                [('', self_copy.__start), ('', other_copy.__start)])
+        new_final = _Node(True, [])
+        self_copy.__final.is_final = False
+        other_copy.__final.is_final = False
+        self_copy.__final.transitions.append(('', new_final))
+        other_copy.__final.transitions.append(('', new_final))
+
+        return Rex(new_start, new_final)
+
+    def star(self):
+        self_copy = copy.deepcopy(self)
+        self_copy.__final.transitions.append(('', self_copy.__start))
+        self_copy.__final.is_final = False
+        self_copy.__start.is_final = True
+        self_copy.__final = self_copy.__start
+
+        return self_copy
+
     def __init__(self, start, final):
-        self.start = start
-        self.final = final
+        assert type(start) == _Node
+        assert type(final) == _Node
 
-    def run(self, s):
-        return self.start.run(s)
+        self.__start = start
+        self.__final = final
 
-    def copy(self):
-        new_start, mapping = self.start.copy()
-        new_final = mapping[self.final]
-        return Nfa(new_start, new_final)
+    def __deepcopy__(self, memo):
+        assert type(memo) == dict
 
-class Node(object):
+        new_start = copy.deepcopy(self.__start, memo)
+        new_final = memo[self.__final]
+        shallow_copy = copy.copy(self)
+        shallow_copy.__start = new_start
+        shallow_copy.__final = new_final
+
+        return shallow_copy
+
+class _Node(object):
     def __init__(self, is_final, transitions):
+        assert type(is_final) == bool
+        assert type(transitions) == list
+
         self.is_final = is_final
         self.transitions = transitions  # (char, node)
 
@@ -31,137 +85,33 @@ class Node(object):
     def __hash__(self):
         return id(self)
 
-    def run(self, s):
-        if self.is_final and len(s) == 0:
+    def run(self, strng):
+        assert type(strng) == str
+
+        if self.is_final and len(strng) == 0:
             return True
         else:
-            nonepsilon_transitions = filter(lambda t: t[0] != None, self.transitions)
-            epsilon_transitions = filter(lambda t: t[0] == None, self.transitions)
-
-            # try epsilon transitions
+            nonepsilon_transitions = [t for t in self.transitions if t[0] != '']
+            epsilon_transitions = [t for t in self.transitions if t[0] == '']
             for transition in epsilon_transitions:
                 _, node = transition
-                if node.run(s):
+                if node.run(strng):
                     return True
-            if len(s) != 0:
+            if len(strng) != 0:
                 for transition in nonepsilon_transitions:
                     char, node = transition
-                    if char == s[0] and node.run(s[1:]):
+                    if char == strng[0] and node.run(strng[1:]):
                         return True
             return False
 
-    def copy(self):
-        def _copy(node, mapping):
-            new_node = Node(node.is_final, [])
-            mapping[node] = new_node
-            for transition in node.transitions:
-                char, node = transition
-                if node in mapping.keys():
-                    new_node.transitions.append((char, mapping[node]))
-                else:
-                    new_node.transitions.append((char, _copy(node, mapping)))
-            return new_node
-        mapping = {}
-        node_copy = _copy(self, mapping)
-        return node_copy, mapping
-
-# char must be a string of length 1
-def make_nfa(char):
-    end = Node(True, [])
-    start = Node(False, [(char, end)])
-    return Nfa(start, end)
-
-def concat(nfa1, nfa2):
-    nfa1_copy = nfa1.copy()
-    nfa2_copy = nfa2.copy()
-    nfa1_copy.final.is_final = False
-    nfa1_copy.final.transitions.append((None, nfa2_copy.start))
-    return nfa1_copy
-
-def altern(nfa1, nfa2):
-    nfa1_copy = nfa1.copy()
-    nfa2_copy = nfa2.copy()
-    new_final = Node(True, [])
-    nfa1_copy.final.is_final = False
-    nfa2_copy.final.is_final = False
-    nfa1_copy.final.transitions = [(None, new_final)]
-    nfa2_copy.final.transitions = [(None, new_final)]
-    return Nfa(
-        Node(False, [(None, nfa1_copy.start), (None, nfa2_copy.start)]),
-        new_final)
-
-def star(nfa):
-    nfa_copy = nfa.copy()
-    nfa_copy.start.is_final = True
-    nfa_copy.final.transitions.append((None, nfa_copy.start))
-    return nfa_copy
-
-def test_make_nfa():
-    nfa = make_nfa('a')
-    assert nfa.run('ab') == False
-    assert nfa.run('a') == True
-    assert nfa.run('') == False
-    assert nfa.run('b') == False
-    assert nfa.run('aa') == False
-
-def test_concat():
-    nfa = concat(make_nfa('a'), make_nfa('b'))
-    assert nfa.run('ab') == True
-    assert nfa.run('a') == False
-    assert nfa.run('') == False
-    assert nfa.run('b') == False
-    assert nfa.run('aa') == False
-
-def test_altern():
-    nfa = altern(make_nfa('a'), make_nfa('b'))
-    assert nfa.run('ab') == False
-    assert nfa.run('a') == True
-    assert nfa.run('') == False
-    assert nfa.run('b') == True
-    assert nfa.run('aa') == False
-
-def test_star():
-    nfa = star(make_nfa('a'))
-    assert nfa.run('ab') == False
-    assert nfa.run('a') == True
-    assert nfa.run('') == True
-    assert nfa.run('b') == False
-    assert nfa.run('aa') == True
-
-def test_copy():
-    # build simple nfa: 'a*b'
-    two = Node(True, [])
-    one = Node(False, [('b', two)])
-    zero = Node(False, [('a', one)])
-    one.transitions.append((None, zero))
-
-    # make copy
-    zero_copy, mapping = zero.copy()
-    one_copy = zero_copy.transitions[0][1]
-    two_copy = one_copy.transitions[0][1]
-
-    # verify mapping contains all nodes
-    assert len(mapping.keys()) == 3
-
-    # verify references are different
-    assert not (zero_copy is zero)
-    assert not (one_copy is one)
-    assert not (two_copy is two)
-
-    # verify is_final for each copy
-    assert not zero_copy.is_final
-    assert not one_copy.is_final
-    assert two_copy.is_final
-
-    # verify transition lengths
-    assert len(zero_copy.transitions) == 1
-    assert len(one_copy.transitions) == 2
-    assert len(two_copy.transitions) == 0
-
-    # verify transition contents
-    assert zero_copy.transitions[0] == ('a', one_copy)
-    assert one_copy.transitions[0] == ('b', two_copy)
-    assert one_copy.transitions[1] == (None, zero_copy)
-
-if __name__ == '__main__':
-    main()
+    def __deepcopy__(self, memo):
+        assert type(memo) == dict
+        new_node = _Node(self.is_final, [])
+        memo[self] = new_node
+        for transition in self.transitions:
+            char, node = transition
+            if node in memo.keys():
+                new_node.transitions.append((char, memo[node]))
+            else:
+                new_node.transitions.append((char, copy.deepcopy(node, memo)))
+        return new_node
