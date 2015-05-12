@@ -98,6 +98,7 @@ def star(nfa):
 
 def test_make_nfa():
     nfa = make_nfa('a')
+    assert nfa.run('ab') == False
     assert nfa.run('a') == True
     assert nfa.run('') == False
     assert nfa.run('b') == False
