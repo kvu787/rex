@@ -7,33 +7,14 @@ def main():
     test_altern()
     test_star()
 
-def run_nfa(nfa, strng):
-    return run(nfa.start, strng)
-
-def run(head, strng):
-    if head.is_final and len(strng) == 0:
-        return True
-    else:
-        nonepsilon_transitions = filter(lambda t: t[0] != None, head.transitions)
-        epsilon_transitions = filter(lambda t: t[0] == None, head.transitions)
-
-        # try epsilon transitions
-        for transition in epsilon_transitions:
-            _, node = transition
-            if run(node, strng):
-                return True
-        if len(strng) != 0:
-            for transition in nonepsilon_transitions:
-                char, node = transition
-                if char == strng[0] and run(node, strng[1:]):
-                    return True
-
-        return False
-
 class Nfa(object):
     def __init__(self, start, final):
         self.start = start
         self.final = final
+
+    def run(self, s):
+        return self.start.run(s)
+
     def copy(self):
         new_start, mapping = self.start.copy()
         new_final = mapping[self.final]
@@ -43,10 +24,32 @@ class Node(object):
     def __init__(self, is_final, transitions):
         self.is_final = is_final
         self.transitions = transitions  # (char, node)
+
     def __eq__(self, other):
         return self is other
+
     def __hash__(self):
         return id(self)
+
+    def run(self, s):
+        if self.is_final and len(s) == 0:
+            return True
+        else:
+            nonepsilon_transitions = filter(lambda t: t[0] != None, self.transitions)
+            epsilon_transitions = filter(lambda t: t[0] == None, self.transitions)
+
+            # try epsilon transitions
+            for transition in epsilon_transitions:
+                _, node = transition
+                if node.run(s):
+                    return True
+            if len(s) != 0:
+                for transition in nonepsilon_transitions:
+                    char, node = transition
+                    if char == s[0] and node.run(s[1:]):
+                        return True
+            return False
+
     def copy(self):
         def _copy(node, mapping):
             new_node = Node(node.is_final, [])
@@ -95,34 +98,34 @@ def star(nfa):
 
 def test_make_nfa():
     nfa = make_nfa('a')
-    assert run_nfa(nfa, 'a') == True
-    assert run_nfa(nfa, '') == False
-    assert run_nfa(nfa, 'b') == False
-    assert run_nfa(nfa, 'aa') == False
+    assert nfa.run('a') == True
+    assert nfa.run('') == False
+    assert nfa.run('b') == False
+    assert nfa.run('aa') == False
 
 def test_concat():
     nfa = concat(make_nfa('a'), make_nfa('b'))
-    assert run_nfa(nfa, 'ab') == True
-    assert run_nfa(nfa, 'a') == False
-    assert run_nfa(nfa, '') == False
-    assert run_nfa(nfa, 'b') == False
-    assert run_nfa(nfa, 'aa') == False
+    assert nfa.run('ab') == True
+    assert nfa.run('a') == False
+    assert nfa.run('') == False
+    assert nfa.run('b') == False
+    assert nfa.run('aa') == False
 
 def test_altern():
     nfa = altern(make_nfa('a'), make_nfa('b'))
-    assert run_nfa(nfa, 'ab') == False
-    assert run_nfa(nfa, 'a') == True
-    assert run_nfa(nfa, '') == False
-    assert run_nfa(nfa, 'b') == True
-    assert run_nfa(nfa, 'aa') == False
+    assert nfa.run('ab') == False
+    assert nfa.run('a') == True
+    assert nfa.run('') == False
+    assert nfa.run('b') == True
+    assert nfa.run('aa') == False
 
 def test_star():
     nfa = star(make_nfa('a'))
-    assert run_nfa(nfa, 'ab') == False
-    assert run_nfa(nfa, 'a') == True
-    assert run_nfa(nfa, '') == True
-    assert run_nfa(nfa, 'b') == False
-    assert run_nfa(nfa, 'aa') == True
+    assert nfa.run('ab') == False
+    assert nfa.run('a') == True
+    assert nfa.run('') == True
+    assert nfa.run('b') == False
+    assert nfa.run('aa') == True
 
 def test_copy():
     # build simple nfa: 'a*b'
