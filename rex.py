@@ -86,6 +86,9 @@ class _Node(object):
         return id(self)
 
     def run(self, strng):
+        return self.run_bfs(strng)
+
+    def run_dfs(self, strng):
         assert type(strng) == str
 
         if self.is_final and len(strng) == 0:
@@ -102,6 +105,73 @@ class _Node(object):
                     char, node = transition
                     if char == strng[0] and node.run(strng[1:]):
                         return True
+            return False
+
+    def run_bfs(self, strng):
+        assert type(strng) == str
+
+        """
+        invariants:
+            substring s[0:i] has been matched
+
+            q1 contains all the next possible states. It is not guaranteed
+            that these states are fully reduced (they may be epsilon
+            transitions).
+
+            success is True if and only if the set of current states includes
+            a final state
+        """
+        i = 0
+        q1 = [self]
+        success = False
+        while len(q1) > 0:
+            success = False
+            q2 = []
+            if i == len(strng):
+                while len(q1) > 0:
+                    state = q1.pop()
+                    if state.is_final: # final state
+                        success = True
+                        continue
+                    for transition in state.transitions:
+                        char, node = transition
+                        if char == '':
+                            q1.insert(0, node)
+                        else:
+                            pass
+                q1 = q2
+                if len(q1) == 0:
+                    pass
+                    # inv reestablished
+                else:
+                    raise Exception('impossible condition')
+            else:
+                while len(q1) > 0:
+                    state = q1.pop()
+                    if state.is_final: # final state
+                        success = True
+                    for transition in state.transitions:
+                        char, node = transition
+                        if char == '':
+                            q1.insert(0, node)
+                        else:
+                            if strng[i] == char:
+                                q2.insert(0, node)
+                            else:
+                                pass
+                q1 = q2
+                if len(q1) == 0:
+                    pass
+                    # inv reestablished
+                else:
+                    i = i + 1
+                    # inv reestablished
+
+        if i == len(strng):
+            # s[0:len(s)] has been matched
+            return success
+        else:
+            # s did not fully match
             return False
 
     def __deepcopy__(self, memo):
