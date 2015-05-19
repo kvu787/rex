@@ -1,187 +1,172 @@
-import copy
-
 class Rex(object):
+    """Represents a regular expression ('Rex') from formal language theory.
+
+    'Rex' is an interface class that provides methods to construct and
+    compose regular expressions.
+    These regular expressions can be used to analyze text.
+    'Rex' is an immutable class.
+
+    See http://en.wikipedia.org/wiki/Regular_expression for more background
+    on regular expressions.
+    """
+
+    @classmethod
+    def from_string(cls, strng):
+        """Creates a 'Rex' out of a string describing a regular expression.
+        
+        Args:
+            strng: A string representation of a regular expression. See the
+                   documentation for the 'parse' function for the format.
+
+        Returns:
+            A 'Rex' object.
+
+        Raises:
+            ValueError: If 'strng' does not represent a valid regular
+                        expression.
+        """
+        
+        raise NotImplementedError('Rex.from_string')
+
+    @classmethod
+    def from_ast(cls, ast):
+        """Creates a 'Rex' out of an abstract syntax tree (AST) describing a regular expression.
+        
+        Args:
+            ast: An AST representation of a regular expression in the form of a
+            'tuple'. See the documentation for the 'parse' function for the
+            format.
+
+        Returns:
+            A 'Rex' object.
+
+        Assumes:
+            'ast' is a valid AST for a regular expression as specified in the
+            return value for the 'parse' function
+        """
+        
+        raise NotImplementedError('Rex.from_ast')
+
     @classmethod
     def from_character(cls, char):
-        assert type(char) == str
-        assert len(char) == 0 or len(char) == 1
+        """Creates a 'Rex' out of a single character.
+        
+        Args:
+            char: A string of length 1, or 0 for the empty string. 
 
-        final = _Node(True, [])
-        start = _Node(False, [(char, final)])
+        Returns:
+            A 'Rex' object.
 
-        return cls(start, final)
+        Raises:
+            ValueError: If 'char' is not a valid string character.
+        """
 
-    def run(self, strng):
-        assert type(strng) == str
-
-        return self.__start.run(strng)
+    def match(self, strng):
+        """Returns True if this 'Rex' can produce 'strng'."""
+        
+        raise NotImplementedError('Rex.match')
 
     def concat(self, other):
-        assert type(other) == Rex
-
-        self_copy = copy.deepcopy(self)
-        other_copy = copy.deepcopy(other)
-        self_copy.__final.is_final = False
-        self_copy.__final.transitions.append(('', other.__start))
-        new_start = self_copy.__start
-        new_final = other_copy.__final
-
-        return Rex(new_start, new_final)
+        """Returns a 'Rex' that is the concatenation of 'this' and 'other'."""
+        
+        raise NotImplementedError('Rex.concat')
 
     def altern(self, other):
-        assert type(other) == Rex
-
-        self_copy = copy.deepcopy(self)
-        other_copy = copy.deepcopy(other)
-        new_start = _Node(
-                False,
-                [('', self_copy.__start), ('', other_copy.__start)])
-        new_final = _Node(True, [])
-        self_copy.__final.is_final = False
-        other_copy.__final.is_final = False
-        self_copy.__final.transitions.append(('', new_final))
-        other_copy.__final.transitions.append(('', new_final))
-
-        return Rex(new_start, new_final)
+        """Returns a 'Rex' that is the alternation of 'this' and 'other'."""
+        
+        raise NotImplementedError('Rex.from_string')
 
     def star(self):
-        self_copy = copy.deepcopy(self)
-        self_copy.__final.transitions.append(('', self_copy.__start))
-        self_copy.__final.is_final = False
-        self_copy.__start.is_final = True
-        self_copy.__final = self_copy.__start
+        """Returns a 'Rex' that is the Kleene star (optional repetition) of 'this'."""
 
-        return self_copy
+        raise NotImplementedError('Rex.from_string')
 
-    def __init__(self, start, final):
-        assert type(start) == _Node
-        assert type(final) == _Node
+def parse(strng):
+    """Parses a regular expression string into an abstract syntax tree.
 
-        self.__start = start
-        self.__final = final
+    Args:
+        strng: A string representation of a regular expression.
 
-    def __deepcopy__(self, memo):
-        assert type(memo) == dict
+        The grammar for a regular expression is:
 
-        new_start = copy.deepcopy(self.__start, memo)
-        new_final = memo[self.__final]
-        shallow_copy = copy.copy(self)
-        shallow_copy.__start = new_start
-        shallow_copy.__final = new_final
+        regex = regex regex
+                regex "|" regex
+                regex "*"
+                "(" regex ")"
+                escape_sequence
+                non_meta_character
+        escape_sequence = "\|" | "\*" | "\(" | "\)" | "\\"
+        non_meta_character = any character other than * | ( ) \
 
-        return shallow_copy
+        Note that the grammar does not include the empty string.
 
-class _Node(object):
-    def __init__(self, is_final, transitions):
-        assert type(is_final) == bool
-        assert type(transitions) == list
+    Returns:
+        The abstract syntax tree representation of the string. The AST is a
+        tuple of the form:
 
-        self.is_final = is_final
-        self.transitions = transitions  # (char, node)
+        AST = ("concat", AST, AST)
+              ("altern", AST, AST)
+              ("star", AST)
+              (terminal character, )
 
-    def __eq__(self, other):
-        return self is other
+        The AST may contain empty strings as terminal symbols.
 
-    def __hash__(self):
-        return id(self)
+        If 'strng' cannot be parsed into a valid regular expression,
+        returns None.
+    """
+    assert type(strng) == str
 
-    def run(self, strng):
-        return self.run_bfs(strng)
+    # reject empty strings
+    if len(strng) == 0:
+        return None
 
-    def run_dfs(self, strng):
-        assert type(strng) == str
+    # try concat
+    for i in range(1, len(strng)):
+        first = parse(strng[:i])
+        second = parse(strng[i:])
+        if (first is not None) and (second is not None):
+            return ('concat', first, second)
 
-        if self.is_final and len(strng) == 0:
-            return True
+    # try altern
+    for i in find_all(strng, '|'):
+        first = parse(strng[:i])
+        second = parse(strng[i+1:])
+        if (first is not None) and (second is not None):
+            return ('altern', first, second)
+
+    # try star
+    body = strng[:len(strng)-1]
+    last = strng[len(strng)-1]
+    if (last == '*') and (parse(body) is not None):
+        return ('star', parse(body))
+
+    # try parens
+    if len(strng) >= 3:
+        first = strng[0]
+        last = strng[len(strng)-1]
+        if first == '(' and last == ')':
+            return parse(body[1:len(strng)-1])
+
+    if len(strng) == 1:
+        # must be non-meta character
+        if strng in '*|()\\':
+            return None
         else:
-            nonepsilon_transitions = [t for t in self.transitions if t[0] != '']
-            epsilon_transitions = [t for t in self.transitions if t[0] == '']
-            for transition in epsilon_transitions:
-                _, node = transition
-                if node.run(strng):
-                    return True
-            if len(strng) != 0:
-                for transition in nonepsilon_transitions:
-                    char, node = transition
-                    if char == strng[0] and node.run(strng[1:]):
-                        return True
-            return False
-
-    def run_bfs(self, strng):
-        assert type(strng) == str
-
-        """
-        invariants:
-            substring s[0:i] has been matched
-
-            q1 contains all the next possible states. It is not guaranteed
-            that these states are fully reduced (they may be epsilon
-            transitions).
-
-            success is True if and only if the set of current states includes
-            a final state
-        """
-        i = 0
-        q1 = [self]
-        success = False
-        while len(q1) > 0:
-            success = False
-            q2 = []
-            if i == len(strng):
-                while len(q1) > 0:
-                    state = q1.pop()
-                    if state.is_final: # final state
-                        success = True
-                        continue
-                    for transition in state.transitions:
-                        char, node = transition
-                        if char == '':
-                            q1.insert(0, node)
-                        else:
-                            pass
-                q1 = q2
-                if len(q1) == 0:
-                    pass
-                    # inv reestablished
-                else:
-                    raise Exception('impossible condition')
-            else:
-                while len(q1) > 0:
-                    state = q1.pop()
-                    if state.is_final: # final state
-                        success = True
-                    for transition in state.transitions:
-                        char, node = transition
-                        if char == '':
-                            q1.insert(0, node)
-                        else:
-                            if strng[i] == char:
-                                q2.insert(0, node)
-                            else:
-                                pass
-                q1 = q2
-                if len(q1) == 0:
-                    pass
-                    # inv reestablished
-                else:
-                    i = i + 1
-                    # inv reestablished
-
-        if i == len(strng):
-            # s[0:len(s)] has been matched
-            return success
+            return (strng,)
+    elif len(strng) == 2:
+        # must be escaped meta character
+        if strng[0] == '\\' and strng[1] in '*|()\\':
+            return (strng[1],)
         else:
-            # s did not fully match
-            return False
+            return None
+    else:
+        return None
 
-    def __deepcopy__(self, memo):
-        assert type(memo) == dict
-        new_node = _Node(self.is_final, [])
-        memo[self] = new_node
-        for transition in self.transitions:
-            char, node = transition
-            if node in memo.keys():
-                new_node.transitions.append((char, memo[node]))
-            else:
-                new_node.transitions.append((char, copy.deepcopy(node, memo)))
-        return new_node
+def find_all(strng, c):
+    assert type(strng) == str
+
+    retval = []
+    for i in range(len(strng)):
+        if strng[i] == c:
+            retval.append(i)
+    return retval
