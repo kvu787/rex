@@ -82,6 +82,7 @@ class NodeRex(Rex):
         shallow_copy = copy.copy(self)
         shallow_copy.start = new_start
         shallow_copy.final = new_final
+        memo[self] = shallow_copy
 
         return shallow_copy
 
