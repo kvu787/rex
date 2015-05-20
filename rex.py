@@ -44,8 +44,19 @@ class Rex(object):
             'ast' is a valid AST for a regular expression as specified in the
             return value for the 'parse' function
         """
-        
-        raise NotImplementedError('Rex.from_ast')
+        if type(ast) != tuple:
+            raise ValueError()
+
+        if len(ast) == 1:
+            return cls.from_character(ast[0])
+        else:
+            operation = ast[0]
+            if operation == 'concat':
+                return cls.from_ast(ast[1]).concat(cls.from_ast(ast[2]))
+            elif operation == 'altern':
+                return cls.from_ast(ast[1]).altern(cls.from_ast(ast[2]))
+            elif operation == 'star':
+                return cls.from_ast(ast[1]).star()
 
     @classmethod
     def from_character(cls, char):

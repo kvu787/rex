@@ -9,23 +9,7 @@ class TupleRex(Rex):
         ast = parse(strng)
         if ast is None:
             raise ValueError()
-        return TupleRex.from_ast(ast)
-
-    @classmethod
-    def from_ast(cls, ast):
-        if type(ast) != tuple:
-            raise ValueError()
-
-        if len(ast) == 1:
-            return TupleRex.from_character(ast[0])
-        else:
-            operation = ast[0]
-            if operation == 'concat':
-                return TupleRex.from_ast(ast[1]).concat(TupleRex.from_ast(ast[2]))
-            elif operation == 'altern':
-                return TupleRex.from_ast(ast[1]).altern(TupleRex.from_ast(ast[2]))
-            elif operation == 'star':
-                return TupleRex.from_ast(ast[1]).star()
+        return cls.from_ast(ast)
 
     @classmethod
     def from_character(cls, char):
