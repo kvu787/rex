@@ -37,7 +37,7 @@ class TupleRex(Rex):
     def match(self, strng):
         assert type(strng) == str
 
-        return '' in self.__match(strng)
+        return '' in self._match(strng)
 
     def concat(self, other):
         assert type(other) == TupleRex
@@ -52,7 +52,7 @@ class TupleRex(Rex):
     def star(self):
         return TupleRex(('star', self))
 
-    def __match(self, strng):
+    def _match(self, strng):
         """
         Returns set of suffixes such that for each suffix strng:
             There exists some prefix p such that:
@@ -83,19 +83,19 @@ class TupleRex(Rex):
             if op == 'concat':
                 _, rex1, rex2 = tup
                 result = []
-                for suffix1 in rex1.__match(strng):
-                    for suffix2 in rex2.__match(suffix1):
+                for suffix1 in rex1._match(strng):
+                    for suffix2 in rex2._match(suffix1):
                         result.append(suffix2)
                 return result
             elif op == 'altern':
                 _, rex1, rex2 = tup
-                return rex1.__match(strng) + rex2.__match(strng)
+                return rex1._match(strng) + rex2._match(strng)
             elif op == 'star':
                 result = [strng]
                 _, rex = tup
                 current_rex = rex
                 while True:
-                    suffixes = current_rex.__match(strng)
+                    suffixes = current_rex._match(strng)
                     if len(suffixes) == 0:
                         break
                     else:
@@ -105,6 +105,3 @@ class TupleRex(Rex):
 
     def __init__(self, tup):
         self.tup = tup
-
-if __name__ == '__main__':
-    main()
