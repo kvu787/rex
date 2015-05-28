@@ -1,7 +1,7 @@
 class Rex(object):
     """Represents a regular expression ('Rex') from formal language theory.
 
-    'Rex' is an interface class that provides methods to construct and
+    'Rex' is an abstract class that provides methods to construct and
     compose regular expressions.
     These regular expressions can be used to analyze text.
     'Rex' is an immutable class.
@@ -101,11 +101,11 @@ def parse(strng):
         The grammar for a regular expression is:
 
         regex = regex regex
-                regex "|" regex
-                regex "*"
-                "(" regex ")"
-                escape_sequence
-                non_meta_character
+              | regex "|" regex
+              | regex "*"
+              | "(" regex ")"
+              | escape_sequence
+              | non_meta_character
         escape_sequence = "\|" | "\*" | "\(" | "\)" | "\\"
         non_meta_character = any character other than * | ( ) \
 

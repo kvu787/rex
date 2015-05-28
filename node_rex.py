@@ -1,6 +1,6 @@
-from rex import Rex, parse
-
 import copy
+
+from rex import Rex, parse
 
 class NodeRex(Rex):
     @classmethod
