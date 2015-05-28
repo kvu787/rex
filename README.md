@@ -8,7 +8,7 @@
 
 `rex.py` is an abstract class that specifies the `Rex` regular expression
 class. `node_rex.py` and `tuple_rex.py` are implementations of `Rex`. Import
-an implementation of `Rex` as follows:
+an implementation of `Rex` with:
 
 ```
 from node_rex import NodeRex as Rex
